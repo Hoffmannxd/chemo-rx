@@ -1,0 +1,31 @@
+---
+title: "Data Summary"
+author: "Matheus Hoffmann Fernandes Santos"
+date: "29 de março de 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Collect
+
+Extract data from tables, which are comorbidity, demography, non hematological and SNP(single nucleotide polymorphism)
+
+```{r}
+setwd("C:\\Users\\Hoffmann\\Desktop\\dados_dissert")
+
+df_como <- read.csv("comorbidade.csv", sep = ";", stringsAsFactors = FALSE)
+df_demo <- read.csv("dadosdemo.csv", sep = ";",stringsAsFactors = FALSE)
+df_nhem <- read.csv("nhemato.csv", sep = ";", stringsAsFactors = FALSE)
+df_snp <- read.csv("snpcorrect.csv", sep = ";",stringsAsFactors = FALSE)
+```
+
+## Data Frame resume
+
+Adding here Data frame size, etc with native R functions
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+## SQLdf to make: % of missing and histograms with plotter.
