@@ -1,31 +1,160 @@
 ---
 title: "Data Summary"
 author: "Matheus Hoffmann Fernandes Santos"
-date: "29 de março de 2018"
+date: "April 2018"
 output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+require(sqldf)
 ```
 
 ## Collect
 
-Extract data from tables, which are comorbidity, demography, non hematological and SNP(single nucleotide polymorphism)
+Create data frames from tables, which are comorbidity, demography, non-hematological and SNP(single nucleotide polymorphism)
 
-```{r}
+```{r, echo=TRUE}
 setwd("C:\\Users\\Hoffmann\\Desktop\\dados_dissert")
 
 df_como <- read.csv("comorbidade.csv", sep = ";", stringsAsFactors = FALSE)
 df_demo <- read.csv("dadosdemo.csv", sep = ";",stringsAsFactors = FALSE)
 df_nhem <- read.csv("nhemato.csv", sep = ";", stringsAsFactors = FALSE)
 df_snp <- read.csv("snpcorrect.csv", sep = ";",stringsAsFactors = FALSE)
+
+cat("Table Summary: Observations and Variables\n")
+cat(sprintf("Comorbidity ------------ %i | %i\n",nrow(df_como),ncol(df_como)))
+cat(sprintf("Demographic ------------- %i | %i\n",nrow(df_demo),ncol(df_demo)))
+cat(sprintf("Non-hemotological ------ %i | %i\n",nrow(df_nhem),ncol(df_nhem)))
+cat(sprintf("SNP -------------------- %i | %i\n",nrow(df_snp),ncol(df_snp)))
 ```
 
-## Data Frame resume
+## Missing Values
 
-Adding here Data frame size, etc with native R functions
-```{r pressure, echo=FALSE}
-plot(pressure)
+Showing percentage of missing values, by table.
+
+### Comorbidity data
+
+```{r, echo=TRUE}
+#IMC has one value 999
+count <- sqldf("SELECT COUNT(*) AS total FROM df_como")
+
+queryBuilderMissing <- function(column, total, df){
+ if(column == "IMC"){
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s < 60 OR %s <> '' OR %s <> NULL", #remove 999 value
+                    column, total, df,column, column, column)
+  } else {
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s <> '' OR %s <> NULL",
+                    column, total, df, column, column)
+  }
+
+  #print(result)
+  return(result)
+}
+getMissingByHeader <- function(){
+  results <- c()
+  percent <- "%"
+  for(index in colnames(df_como)){
+    missing_in_column <- sqldf(queryBuilderMissing(index, count$total, "df_como"))
+    print(sprintf("%s missing values ratio >> %.2f%s", index, missing_in_column*100, percent))
+    #results <- c(results, missing_in_column)
+  }
+  #return(results)
+}
+
+getMissingByHeader()
+
 ```
-## SQLdf to make: % of missing and histograms with plotter.
+
+### Demographic data 
+
+```{r, echo=TRUE}
+count <- sqldf("SELECT COUNT(*) AS total FROM df_demo")
+#One register filho = 99
+queryBuilderMissing <- function(column, total, df){
+ if(column == "filho"){
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s < 20 OR %s <> '' OR %s <> NULL", #remove 999 value
+                    column, total, df,column, column, column)
+  } else {
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s <> '' OR %s <> NULL",
+                    column, total, df, column, column)
+  }
+  #print(result)
+  return(result)
+}
+getMissingByHeader <- function(){
+  results <- c()
+  percent <- "%"
+  for(index in colnames(df_demo)){
+    missing_in_column <- sqldf(queryBuilderMissing(index, count$total, "df_demo"))
+    print(sprintf("%s missing values ratio >> %.2f%s", index, missing_in_column*100, percent))
+    #results <- c(results, missing_in_column)
+  }
+  #return(results)
+}
+
+getMissingByHeader()
+
+```
+
+### Single Nucleotide Polymorphism data
+
+Old column names renamed to allow sqldf use, columnnames containing some special chars are mapped to '.'
+Changes: '>' = bt, ' '='', '-'='' 
+Obs: Numeric (first letter)headers are mapped to X{{Name}} 
+```{r, echo=TRUE}
+count <- sqldf("SELECT COUNT(*) AS total FROM df_snp")
+
+queryBuilderMissing <- function(column, total, df){
+  if(column == "N" || column == "Pront"){
+          result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s<>'' OR %s<>NULL", column, total, df, column, column)
+  } else {
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s='0' OR %s='1' OR %s='2'", column, total, df, column, column, column)
+  }
+
+  #print(result)
+  return(result)
+}
+getMissingByHeader <- function(){
+  #colnames old c("N", "Pront", "15631 G>T", "18053 A>G", "25505C>T", "6986 A>G", "C1236T", "G2677T/A", "C3435T", "A>G (ILE105VAL)", "02 (Ala114Val)", "11 G>A", "Ile655Val A>G", "A>G", "C>G")
+  #results <- c()
+  percent <- "%"
+  for(index in colnames(df_snp)){
+    missing_in_column <- sqldf(queryBuilderMissing(index, count$total, "df_snp"))
+    print(sprintf("%s missing values ratio >> %.2f%s", index, missing_in_column*100, percent))
+    #results <- c(results, missing_in_column)
+  }
+  #return(results)
+}
+
+getMissingByHeader()
+```
+### Non-hematological data
+
+Check if percentage by reaction make more sense.
+```{r, echo=TRUE}
+count <- sqldf("SELECT COUNT(*) AS total FROM df_nhem")
+
+queryBuilderMissing <- function(column, total, df){
+  if(column == "Prontuario" || column == "Protocolo"){
+          result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s<>'' OR %s<>NULL", column, total, df, column, column)
+  } else {
+      result <- sprintf("SELECT (1 - CAST(COUNT(%s) AS FLOAT)/%i) AS missing FROM %s WHERE %s='0' OR %s='1' OR %s='2' OR %s='3' OR %s='4'", column, total, df, column, column, column, column, column)
+  }
+
+  #print(result)
+  return(result)
+}
+getMissingByHeader <- function(){
+  percent <- "%"
+  for(index in colnames(df_nhem)){
+    missing_in_column <- sqldf(queryBuilderMissing(index, count$total, "df_nhem"))
+    print(sprintf("%s missing values ratio >> %.2f%s", index, missing_in_column*100, percent))
+    #results <- c(results, missing_in_column)
+  }
+  #return(results)
+}
+
+getMissingByHeader()
+```
+
